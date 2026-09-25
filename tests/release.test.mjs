@@ -9,10 +9,26 @@ const fixture = () => ({
   chainId: '1043', epochSeconds: 60, architecture: 'linux-amd64',
   nativeGenesis: '0x06d7950592aa0319de5e81bc29a7ac283010274a5ca2561f319ab1bdb8b222df',
   evmGenesis: '0x58d97c1c16a3ff988105c2bd101b2f473103cc2ef7106ade3296647de65a1663',
+  evmGenesisStateRoot: '0xba6c20f5d0f78f8f636d6f96888608b06e81398efb2f5b8163c695229d8e4488',
+  node: { path: 'bin/bdag', sha256: 'b'.repeat(64) },
+  schedule: {
+    signalStartLayer: '30000', signalWindowLayers: '2000', signalThresholdLayers: '1500',
+    activationDelayLayers: '2000', activationLayer: '33999', earliestEvmBlock: '30000',
+    noticePublishedAt: '1800000000', notBeforeTimestamp: '1800086400', manifestSha256: 'c'.repeat(64),
+  },
   package: { filename: 'bdag-testnet-v0.1.0-rc.1-linux-amd64.tar.gz', sha256: 'a'.repeat(64), bytes: 12345, cid },
   recordsCid: cid, providers: ['pinata', 'filebase'],
   distribution: 'github-and-ipfs',
   qualifications: { cleanReplay: true, isolatedUpgrade: true, independentBuilds: true, artifactsVerified: true },
+});
+test('signed release must bind the binary, genesis root and safe activation schedule', () => {
+  for (const mutate of [
+    v => delete v.schedule, v => delete v.node, v => v.node.path = '../bdag',
+    v => v.node.sha256 = 'unhashed', v => v.evmGenesisStateRoot = '0x00',
+    v => v.schedule.signalThresholdLayers = '1', v => v.schedule.activationDelayLayers = '1999',
+    v => v.schedule.activationLayer = '34000', v => v.schedule.signalStartLayer = '030000',
+    v => v.schedule.notBeforeTimestamp = '1800000001', v => delete v.schedule.manifestSha256,
+  ]) { const v = fixture(); mutate(v); assert.throws(() => validateManifest(v)); }
 });
 
 test('latest view has an honest non-installable empty state', () => {

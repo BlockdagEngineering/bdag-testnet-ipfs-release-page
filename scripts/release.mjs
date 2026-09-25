@@ -12,10 +12,21 @@ export function validateManifest(value) {
   requireValue(value.status === 'published' && releasePattern.test(value.release), 'Not a published testnet release');
   requireValue(value.chainId === '1043' && value.epochSeconds === 60, 'Wrong network or reward epoch policy');
   requireValue(value.nativeGenesis === nativeGenesis && value.evmGenesis === evmGenesis, 'Wrong genesis');
+  requireValue(value.evmGenesisStateRoot === '0xba6c20f5d0f78f8f636d6f96888608b06e81398efb2f5b8163c695229d8e4488', 'Wrong genesis state root');
   requireValue(value.architecture === 'linux-amd64', 'Unsupported architecture');
   requireValue(value.package?.filename === `bdag-${value.release}-linux-amd64.tar.gz`, 'Unexpected package filename');
   requireValue(/^[a-f0-9]{64}$/.test(value.package.sha256), 'Invalid package checksum');
-  requireValue(Number.isSafeInteger(value.package.bytes) && value.package.bytes > 0, 'Invalid package size');
+  requireValue(Number.isSafeInteger(value.package.bytes) && value.package.bytes > 0 && value.package.bytes <= 512 * 1024 * 1024, 'Invalid package size');
+  requireValue(value.node?.path === 'bin/bdag' && /^[a-f0-9]{64}$/.test(value.node.sha256), 'Missing binary hash');
+  const schedule = value.schedule;
+  const fields = ['signalStartLayer', 'signalWindowLayers', 'signalThresholdLayers', 'activationDelayLayers', 'activationLayer', 'earliestEvmBlock', 'noticePublishedAt', 'notBeforeTimestamp'];
+  requireValue(schedule && fields.every(k => typeof schedule[k] === 'string' && /^(0|[1-9][0-9]*)$/.test(schedule[k]) && BigInt(schedule[k]) < 2n ** 64n), 'Schedule requires canonical uint64 fields');
+  const s = Object.fromEntries(fields.map(k => [k, BigInt(schedule[k])]));
+  requireValue(s.signalStartLayer > 0n && s.earliestEvmBlock > 0n, 'Schedule cannot start at genesis');
+  requireValue(s.signalWindowLayers === 2000n && s.signalThresholdLayers === 1500n, 'Unsafe signalling threshold');
+  requireValue(s.activationDelayLayers >= 2000n && s.activationLayer === s.signalStartLayer + 1999n + s.activationDelayLayers, 'Unsafe activation anchor or delay');
+  requireValue(s.noticePublishedAt > 0n && s.notBeforeTimestamp >= s.noticePublishedAt + 86400n, 'Notice must last at least 24 hours');
+  requireValue(/^[a-f0-9]{64}$/.test(schedule.manifestSha256), 'Missing activation manifest hash');
   requireValue(['github-only', 'github-and-ipfs'].includes(value.distribution), 'Unsupported distribution mode');
   if (value.distribution === 'github-and-ipfs') {
     requireValue(cidPattern.test(value.package.cid) && cidPattern.test(value.recordsCid), 'Expected canonical directory CIDs');

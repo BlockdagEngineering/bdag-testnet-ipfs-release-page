@@ -17,6 +17,7 @@ Use Node 24.19.0. No dependencies are required.
 ```sh
 npm test
 npm run build
+python3 -m unittest discover -s tests -p '*_test.py' -v
 ```
 
 The build requires an empty `dist` directory and copies only explicitly allowed public files. Archive a previous `dist` before rebuilding. Preview `dist/index.html` with a static HTTP server.
@@ -30,6 +31,21 @@ The build requires an empty `dist` directory and copies only explicitly allowed 
 5. Set `latest.json` to that version. Tests and the build reject unsigned, mismatched, wrong-network or unqualified records. Push the public page only to branch `testnet`.
 
 Never edit already-published release records. A correction needs a new release or separately signed distribution record. The page displays one latest release, while old release records and downloads remain preserved.
+
+## Offline operator verification
+
+The read-only `scripts/verify-package.py` requires Python 3.9+ and OpenSSL 3. Obtain this verifier from a reviewed commit of this public repository. Do not execute scripts from an unverified download. It needs no private source access, npm packages, RPC access or credentials.
+
+Once a qualified release is published, download its package, `release-auth-manifest.json`, `release-auth-manifest.sig` and `release-public-key.pem` into one private staging directory. Confirm the fingerprint below with Francois through a separate trusted channel, then run:
+
+```sh
+python3 scripts/verify-package.py /absolute/path/to/staging \
+  --trusted-fingerprint 08076b2af2eab10f1b742ec019d751da0fe81c86d8073c2030c0a93e5d68fee3
+```
+
+The verifier authenticates the exact manifest bytes and package, validates chain identity and minimum schedule gates, and inspects the archive without extracting or executing it. A passing report grants **no installation or activation approval**. It does not check the live native layer, guarantee that the schedule has not been missed, or independently prove the publisher's qualification claims.
+
+The signed package inventory is exactly `bin/bdag`, `activation-manifest.json`, `OPERATOR-INSTRUCTIONS.md` and `LICENSES.txt`. No symlinks, devices, duplicate paths, extra files or writable-by-group/others entries are allowed. The signed outer manifest pins the binary hash, activation-manifest hash, all genesis identifiers and schedule. The public page rejects records missing these pins. There is currently no package to verify or install.
 
 ## Later IPFS setup
 
