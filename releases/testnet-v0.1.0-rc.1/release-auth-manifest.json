@@ -1,0 +1,98 @@
+{
+  "schema": "bdag.testnet.release.v1",
+  "release": "testnet-v0.1.0-rc.1",
+  "status": "published",
+  "distribution": "private-operator-delivery",
+  "providers": [],
+  "architecture": "linux-amd64",
+  "chainId": "1043",
+  "epochSeconds": 60,
+  "nativeGenesis": "0x06d7950592aa0319de5e81bc29a7ac283010274a5ca2561f319ab1bdb8b222df",
+  "evmGenesis": "0x58d97c1c16a3ff988105c2bd101b2f473103cc2ef7106ade3296647de65a1663",
+  "evmGenesisStateRoot": "0xba6c20f5d0f78f8f636d6f96888608b06e81398efb2f5b8163c695229d8e4488",
+  "package": {
+    "filename": "bdag-testnet-v0.1.0-rc.1-linux-amd64.tar.gz",
+    "bytes": 48227550,
+    "sha256": "de9bc8311fcce21907438b25e1643a12c76733f59d4a9a424133748127437ab5"
+  },
+  "source": {
+    "filename": "bdag-testnet-v0.1.0-rc.1-source.tar.gz",
+    "bytes": 30433621,
+    "sha256": "ca891817200e1aecf302e481d26ce48972a26797cc2acbacbc3f60c5eabd804c",
+    "access": "vetted-recipients"
+  },
+  "node": {
+    "path": "bin/bdag",
+    "sha256": "1ff9e3e4661a802e944ef82ef5dd786ed3d662ad55cb1c40ecfec62ab3317101"
+  },
+  "baselineCheckpoint": {
+    "number": "0x4cb3",
+    "hash": "0xaa9935592ea435cea7ef83608c4901df7dd9a2ea7505b8fb697edab08e9b43ab",
+    "stateRoot": "0x108806f963273b3632dccf097cbd266c7babb89d5276bf4197f3267a0173ecc7",
+    "checkedAt": "2026-09-25T14:45:23.130Z",
+    "scope": "All four RC2 coordinator nodes matched this historical block. Recheck current fork/head before installation."
+  },
+  "verifier": {
+    "filename": "verify-package.py",
+    "bytes": 10683,
+    "sha256": "f0932bffec133513a33fe4f62fe0b2dd04d9ee8a5c6b18e64f8cc8da02d550d6"
+  },
+  "coordinatorImage": {
+    "name": "bdag-testnet-node:testnet-v0.1.0-rc.1",
+    "imageId": "sha256:f2ab22b8dafcbe95620404d96d6eb836b435a75e7580964d31924f14fd9dd54c",
+    "availability": "coordinator-local-only, not a public registry download",
+    "baseImageId": "sha256:70e713c07d2c48e4d507a0274e0dd327c17ca5ce979aeef189707ec5ee61eb32",
+    "unchangedCpuMinerSha256": "8028fd787bb52dc26238c2df753162ebbe3c1ce059dae4be884e08ce9d5a2224",
+    "unchangedNodeworkerSha256": "3338f69a61051d008a770f73f98cb1e537d95eb6d0b44d459779f1edb3e77871"
+  },
+  "sources": {
+    "core": "2d3e67c47c3a02d4bb684491f88ac6b2ab4eb100",
+    "contracts": "d0490f553b3397bab4b10bc77da166ac9303fd08"
+  },
+  "contracts": {
+    "revision": 7,
+    "manifestSha256": "2974bfdce5e574db5df0a2ca49c4fd8d5f8f78adb9845ba3f741125a0d0c7529",
+    "bootstrapAllocSha256": "304aeee52c451e383f1960bdc32d0415d1ad9bc3e0fe19dff95af197bc82d199",
+    "runtimeAccounts": 19
+  },
+  "schedule": {
+    "signalStartLayer": "26000",
+    "signalWindowLayers": "2000",
+    "signalThresholdLayers": "1500",
+    "activationDelayLayers": "2000",
+    "activationLayer": "29999",
+    "earliestEvmBlock": "26000",
+    "releaseDistributedAt": "1790359200",
+    "noticePublishedAt": "1790359200",
+    "notBeforeTimestamp": "1790445600",
+    "manifestSha256": "dbd326237652783d80f9bae7371f23bd669f8bcb70265fde39d8ac593e05c043",
+    "timestampInterpretation": "Distribution and notice timestamps are conservative latest-allowed bounds. Actual private delivery and notice must be recorded no later than these bounds. If missed, replace the candidate, never edit it."
+  },
+  "qualifications": {
+    "profile": "experimental-operator-trial-v1",
+    "rc2HistoricalEvmReplay": true,
+    "nativeActivationReplay": true,
+    "persistedRestart": true,
+    "independentBuilds": true,
+    "artifactsVerified": true,
+    "scope": "18,822 captured RC2 EVM blocks. Two isolated native fixture replays through revision-7 activation and real database reopen, 5,106 blocks each. Two clean local AMD64 containers with identical output, not an independent-person review. Contract/layout/ABI checks in private evidence."
+  },
+  "pendingAcceptance": [
+    "Exact live multi-operator RC2/OIN01 switchover and post-activation P2P replay",
+    "Current-candidate stale-node rejection on the live rehearsal history",
+    "Physical AC-loss, operator backups and isolated restore",
+    "Local frontend chain-1043 integration and browser-wallet journeys",
+    "Independent security and provenance review before any mainnet consideration"
+  ],
+  "approvals": {
+    "install": false,
+    "signalActivate": false,
+    "mainnet": false
+  },
+  "distributionScope": "Current vetted testnet operators only, binary plus matching source and applicable licence rights. Public metadata does not grant installation approval or certify independent licensing review.",
+  "evidence": {
+    "scheduledReplaySha256": "0c648377e039168523eda7f230aeee94324ce301caebaf73be9cab05b238f9b1",
+    "scheduledCoreChecksSha256": "17eaedad9455422623b6d93812ca063a52de7be9be682bd309248619aa3d5cd9",
+    "buildComparisonSha256": "fb11a8062b3ffe90c13dcd7e0260c03b101617794e89a9257f2b31d31af83142"
+  }
+}
