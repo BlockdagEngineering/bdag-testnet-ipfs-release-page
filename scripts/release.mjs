@@ -27,7 +27,12 @@ export function validateManifest(value) {
   requireValue(s.activationDelayLayers >= 2000n && s.activationLayer === s.signalStartLayer + 1999n + s.activationDelayLayers, 'Unsafe activation anchor or delay');
   requireValue(s.noticePublishedAt > 0n && s.notBeforeTimestamp >= s.noticePublishedAt + 86400n, 'Notice must last at least 24 hours');
   requireValue(/^[a-f0-9]{64}$/.test(schedule.manifestSha256), 'Missing activation manifest hash');
-  requireValue(['github-only', 'github-and-ipfs'].includes(value.distribution), 'Unsupported distribution mode');
+  requireValue(['github-only', 'github-and-ipfs', 'private-operator-delivery'].includes(value.distribution), 'Unsupported distribution mode');
+  const privateTrial = value.distribution === 'private-operator-delivery';
+  if (privateTrial) {
+    requireValue(value.source?.filename === `bdag-${value.release}-source.tar.gz` && /^[a-f0-9]{64}$/.test(value.source.sha256), 'Private delivery requires pinned matching source');
+    requireValue(Number.isSafeInteger(value.source.bytes) && value.source.bytes > 0 && value.source.bytes <= 1024 * 1024 * 1024 && value.source.access === 'vetted-recipients', 'Invalid private source record');
+  }
   if (value.distribution === 'github-and-ipfs') {
     requireValue(cidPattern.test(value.package.cid) && cidPattern.test(value.recordsCid), 'Expected canonical directory CIDs');
     requireValue(Array.isArray(value.providers) && value.providers.length === 2 &&
@@ -35,7 +40,9 @@ export function validateManifest(value) {
   } else {
     requireValue(value.package.cid === undefined && value.recordsCid === undefined && Array.isArray(value.providers) && value.providers.length === 0, 'GitHub-only release must not claim IPFS availability');
   }
-  for (const check of ['cleanReplay', 'isolatedUpgrade', 'independentBuilds', 'artifactsVerified']) {
+  const trial = value.qualifications?.profile === 'experimental-operator-trial-v1';
+  requireValue(!trial || privateTrial, 'Experimental operator trial is private delivery only');
+  for (const check of trial ? ['rc2HistoricalEvmReplay', 'nativeActivationReplay', 'persistedRestart', 'independentBuilds', 'artifactsVerified'] : ['cleanReplay', 'isolatedUpgrade', 'independentBuilds', 'artifactsVerified']) {
     requireValue(value.qualifications?.[check] === true, `Release qualification missing: ${check}`);
   }
   return value;
@@ -60,7 +67,24 @@ export function renderPage(manifest) {
   const github = `https://github.com/BlockdagEngineering/bdag-testnet-ipfs-release-page/releases/download/${release}`;
   const ipfs = manifest?.distribution === 'github-and-ipfs';
   const instructions = ipfs ? `https://ipfs.io/ipfs/${manifest.recordsCid}/OPERATOR-INSTRUCTIONS.md` : `${github}/OPERATOR-INSTRUCTIONS.md`;
-  const section = manifest ? `
+  const privateTrial = manifest?.distribution === 'private-operator-delivery';
+  const section = privateTrial ? `
+    <p class="eyebrow">Private operator trial · Linux AMD64</p>
+    <h1>${release}</h1>
+    <p class="intro">DAO and Staking V2 candidate for the current vetted testnet operators. Obtain the binary, matching source and signed verification files privately from Francois.</p>
+    <p>No public binary or source downloads. Distribution access does not remove recipients’ applicable licence rights.</p>
+    <div class="actions"><a class="button" href="OPERATOR-INSTRUCTIONS.md">Operator instructions</a><a class="secondary" href="#verify">Verify your package</a></div>
+    <section class="panel"><h2>Coordinated trial, not an audited production release</h2>
+      <p>Historical RC2 EVM replay, isolated native activation and persisted restart checks underpin this trial. Full multi-operator switchover and application acceptance are performed during the coordinated rehearsal.</p>
+      <p>Signal window: native layers ${escape(manifest.schedule.signalStartLayer)}–${BigInt(manifest.schedule.signalStartLayer) + 1999n}. Threshold: 1,500 of 2,000. Activation anchor: ${escape(manifest.schedule.activationLayer)}. Time gate: ${escape(new Date(Number(manifest.schedule.notBeforeTimestamp) * 1000).toISOString())}.</p>
+      <p>Installation and signalling need separate approval. Stop miners before upgrading a mining endpoint. Missing the immutable distribution or signalling deadline requires a new candidate.</p>
+    </section>
+    <section id="verify" class="panel"><h2>Verify before installing</h2>
+      <p>Confirm the signing fingerprint with Francois separately. Verification does not authorize installation.</p>
+      <dl><dt>Binary package SHA-256</dt><dd><code>${manifest.package.sha256}</code></dd><dt>Matching source archive SHA-256</dt><dd><code>${manifest.source.sha256}</code></dd><dt>Signing fingerprint</dt><dd><code>${fingerprint}</code></dd></dl>
+      <p><a href="release-auth-manifest.json">Signed manifest</a> · <a href="release-auth-manifest.sig">Signature</a> · <a href="release-public-key.pem">Public key</a></p>
+      <p>IPFS mirrors are deferred. This page contains release metadata and instructions only.</p>
+    </section>` : manifest ? `
     <p class="eyebrow">Latest release · Linux AMD64</p>
     <h1>${release}</h1>
     <p class="intro">A coordinated testnet rehearsal for DAO governance and Staking V2. Verify the package, then wait for the agreed installation window.</p>

@@ -21,6 +21,22 @@ const fixture = () => ({
   distribution: 'github-and-ipfs',
   qualifications: { cleanReplay: true, isolatedUpgrade: true, independentBuilds: true, artifactsVerified: true },
 });
+test('private operator trial has scoped evidence and no public binary or source download', () => {
+  const v = fixture(); v.distribution = 'private-operator-delivery';
+  delete v.package.cid; delete v.recordsCid; v.providers = [];
+  v.source = { filename: `bdag-${v.release}-source.tar.gz`, sha256: 'd'.repeat(64), bytes: 200, access: 'vetted-recipients' };
+  v.qualifications = { profile: 'experimental-operator-trial-v1', rc2HistoricalEvmReplay: true, nativeActivationReplay: true, persistedRestart: true, independentBuilds: true, artifactsVerified: true };
+  const html = renderPage(v);
+  assert.match(html, /Private operator trial/);
+  assert.match(html, /matching source/);
+  assert.doesNotMatch(html, /releases\/download|Download package/);
+  delete v.source;
+  assert.throws(() => validateManifest(v), /source/i);
+});
+test('trial qualification cannot be used to publish public downloads', () => {
+  const v = fixture(); v.qualifications = { profile: 'experimental-operator-trial-v1', rc2HistoricalEvmReplay: true, nativeActivationReplay: true, persistedRestart: true, independentBuilds: true, artifactsVerified: true };
+  assert.throws(() => validateManifest(v));
+});
 test('signed release must bind the binary, genesis root and safe activation schedule', () => {
   for (const mutate of [
     v => delete v.schedule, v => delete v.node, v => v.node.path = '../bdag',

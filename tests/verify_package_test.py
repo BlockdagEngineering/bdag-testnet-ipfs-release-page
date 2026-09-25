@@ -75,9 +75,38 @@ class PackageVerification(unittest.TestCase):
         self.assertFalse(report["installationAuthorized"])
         self.assertEqual(before, sorted(p.name for p in self.root.iterdir()))
 
+    def test_private_trial_requires_matching_source(self):
+        self.manifest['distribution'] = 'private-operator-delivery'
+        self.manifest['qualifications'] = dict.fromkeys(['rc2HistoricalEvmReplay', 'nativeActivationReplay', 'persistedRestart', 'independentBuilds', 'artifactsVerified'], True)
+        self.manifest['qualifications']['profile'] = 'experimental-operator-trial-v1'
+        source = self.root / 'bdag-testnet-v0.1.0-rc.1-source.tar.gz'
+        with tarfile.open(source, 'w:gz') as archive:
+            data = b'fixture source, not executable'
+            item = tarfile.TarInfo('source/core/main.go')
+            item.size, item.mode = len(data), 0o644
+            archive.addfile(item, io.BytesIO(data))
+        self.manifest['source'] = dict(filename=source.name, bytes=source.stat().st_size, sha256=hashlib.sha256(source.read_bytes()).hexdigest(), access='vetted-recipients')
+        self.sign()
+        self.assertTrue(self.verify()['verified'])
+        source.write_bytes(source.read_bytes() + b'tampered')
+        with self.assertRaisesRegex(ValueError, 'source'): self.verify()
+
     def test_requires_trusted_fingerprint(self):
         with self.assertRaisesRegex(ValueError, "fingerprint"):
             self.verify("0" * 64)
+
+    def test_private_source_rejects_unsafe_members(self):
+        self.manifest['distribution'] = 'private-operator-delivery'
+        source = self.root / 'bdag-testnet-v0.1.0-rc.1-source.tar.gz'
+        for name, kind in [('source/../escape', tarfile.REGTYPE), ('source/link', tarfile.SYMTYPE), ('source/device', tarfile.CHRTYPE), ('source/core/nodekey', tarfile.REGTYPE), ('source/.env', tarfile.REGTYPE), ('source/core/../../escape', tarfile.REGTYPE)]:
+            with self.subTest(name=name):
+                with tarfile.open(source, 'w:gz') as archive:
+                    item = tarfile.TarInfo(name)
+                    item.type, item.mode = kind, 0o644
+                    archive.addfile(item)
+                self.manifest['source'] = dict(filename=source.name, bytes=source.stat().st_size, sha256=hashlib.sha256(source.read_bytes()).hexdigest(), access='vetted-recipients')
+                self.sign()
+                with self.assertRaises(ValueError): self.verify()
 
     def test_changed_signed_bytes_rejected(self):
         path = self.root / "release-auth-manifest.json"

@@ -29,5 +29,6 @@ await writeFile(resolve(output, 'release-public-key.pem'), key);
 if (manifest) {
   await writeFile(resolve(output, 'release-auth-manifest.json'), raw);
   await writeFile(resolve(output, 'release-auth-manifest.sig'), signature);
+  if (manifest.distribution === 'private-operator-delivery') await copyFile(resolve(root, 'OPERATOR-INSTRUCTIONS.md'), resolve(output, 'OPERATOR-INSTRUCTIONS.md'));
 }
 console.log(manifest ? `Built latest release: ${manifest.release}` : 'Built non-installable preparation page');

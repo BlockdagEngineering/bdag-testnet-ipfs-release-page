@@ -62,12 +62,19 @@ def validate_manifest(value):
     require(value.get("chainId") == "1043" and value.get("epochSeconds") == 60, "wrong network or epoch policy")
     require(all(value.get(key) == expected for key, expected in GENESIS.items()), "wrong genesis identity")
     require(value.get("architecture") == "linux-amd64", "unsupported architecture")
-    for check in ("cleanReplay", "isolatedUpgrade", "independentBuilds", "artifactsVerified"):
+    trial = value.get('qualifications', {}).get('profile') == 'experimental-operator-trial-v1'
+    require(not trial or value.get('distribution') == 'private-operator-delivery', 'experimental trial must use private delivery')
+    checks = ('rc2HistoricalEvmReplay', 'nativeActivationReplay', 'persistedRestart', 'independentBuilds', 'artifactsVerified') if trial else ('cleanReplay', 'isolatedUpgrade', 'independentBuilds', 'artifactsVerified')
+    for check in checks:
         require(value.get("qualifications", {}).get(check) is True, "missing release qualification: " + check)
     package = value.get("package", {})
     distribution = value.get("distribution")
-    require(distribution in ("github-only", "github-and-ipfs"), "unsupported distribution")
-    if distribution == "github-only":
+    require(distribution in ("github-only", "github-and-ipfs", "private-operator-delivery"), "unsupported distribution")
+    if distribution == 'private-operator-delivery':
+        source = value.get('source', {})
+        require(source.get('filename') == 'bdag-' + release + '-source.tar.gz' and hex_digest(source.get('sha256')), 'matching source hash missing')
+        require(type(source.get('bytes')) is int and 0 < source['bytes'] <= 1024**3 and source.get('access') == 'vetted-recipients', 'invalid source record')
+    if distribution != "github-and-ipfs":
         require("cid" not in package and "recordsCid" not in value and value.get("providers") == [], "GitHub-only release cannot claim IPFS availability")
     else:
         require(all(isinstance(cid, str) and re.fullmatch(r"bafy[a-z2-7]{55}", cid) for cid in (package.get("cid"), value.get("recordsCid"))), "invalid IPFS CIDs")
@@ -127,6 +134,23 @@ def verify_package(directory, trusted_fingerprint):
             if member.name == "activation-manifest.json":
                 require(actual == value["schedule"]["manifestSha256"], "activation manifest hash mismatch")
     require(seen == ALLOWED_FILES, "package file inventory incomplete")
+    if value['distribution'] == 'private-operator-delivery':
+        source = directory / value['source']['filename']
+        require(regular(source, 1024**3) == value['source']['bytes'], 'source size mismatch')
+        with source.open('rb') as stream:
+            require(digest(stream) == value['source']['sha256'], 'source checksum mismatch')
+        source_seen, expanded = set(), 0
+        with tarfile.open(source, 'r:gz') as archive:
+            for member in archive:
+                parts = member.name.split('/')
+                require(parts[0] == 'source' and len(parts) > 1 and all(p not in ('', '.', '..') for p in parts) and '\\' not in member.name and not any(ord(c) < 32 for c in member.name), 'unsafe source path')
+                require(member.isfile() and not member.issparse() and not member.mode & 0o7022, 'unsafe source member')
+                require(member.name not in source_seen, 'duplicate source member')
+                require(not any(p == '.git' or p.startswith('.env') or p in ('nodekey', 'network.key') for p in parts), 'operational material in source')
+                source_seen.add(member.name)
+                expanded += member.size
+                require(len(source_seen) <= 50000 and expanded <= 2 * 1024**3, 'source archive too large')
+        require(bool(source_seen), 'empty source archive')
     return {"verified": True, "release": value["release"], "packageSha256": value["package"]["sha256"],
             "nodeSha256": value["node"]["sha256"], "chainId": "1043", "installationAuthorized": False,
             "next": "Confirm the live chain, schedule and installation approval with Francois. No files were extracted or installed."}
