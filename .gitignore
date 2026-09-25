@@ -1,0 +1,7 @@
+dist/
+node_modules/
+.env*
+*.key
+*-private.pem
+*-signing-key.pem
+.DS_Store
