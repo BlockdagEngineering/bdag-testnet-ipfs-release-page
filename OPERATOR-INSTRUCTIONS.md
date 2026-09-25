@@ -41,6 +41,7 @@ This authenticates and inspects both archives without extracting, installing or 
 - Supported baseline: unchanged RC2 binary `b2a64347b57dc60fc56b545d0ca6882ccb054189ec0fa486be8475e1109b0bef`, or OIN01 handshake-trial binary `e4429b272e67cf9457c09d0f33eed7dc4f48152bf0170ea6611fd1c6e0de08e6`.
 - Resolve the actual service/container, runtime user, executable, arguments, configuration, identity and **both native and EVM database paths**. Inspect locally without printing secrets.
 - Confirm chain ID `1043` (`0x413`) and all genesis identities against the signed manifest. Both approved seed peers must be connected on the same native fork. Compare one recent same-numbered EVM block/hash/state root with Francois. `eth_syncing=false` alone is insufficient.
+- For the initial readiness report, compare your node's `eth_getBlockByNumber` result at the signed manifest's `baselineCheckpoint.number` with its hash and state root. This avoids another checkpoint request now. A fresh common checkpoint is still required at the coordinated installation window.
 - Keep existing ZeroTier-only P2P restrictions. Native RPC, EVM RPC, health and databases remain private. Preserve Fedora SELinux/Firewalld and Ubuntu firewall settings. No profiler is required. Do not enable mining or synchronization bypasses.
 - Report available backup disk space, current binary hash, unchanged peer ID and checkpoint. **Stop here until Francois approves installation.** Keep your current node running.
 
